@@ -166,7 +166,7 @@ module.exports = class MessageMapping {
   presentationTemplate(messageObj) {
     const meetingId = messageObj.core.header.meetingId;
     const userId = messageObj.core.header.userId;
-    const extId = UserMapping.get().getExternalUserID(userId) || "";
+    const extId = UserMapping.getExternalUserID(userId) || "";
     const data = messageObj.core.body;
     this.mappedObject.data = {
       "type": "event",
@@ -174,7 +174,7 @@ module.exports = class MessageMapping {
       "attributes": {
         "meeting": {
           "internal-meeting-id": meetingId,
-          "external-meeting-id": IDMapping.get().getExternalMeetingID(meetingId)
+          "external-meeting-id": IDMapping.getExternalMeetingID(meetingId)
         },
         "user":{
           "internal-user-id": userId,
