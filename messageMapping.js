@@ -14,6 +14,10 @@ module.exports = class MessageMapping {
       "SetCurrentPresentationEvtMsg",
       "RecordingStatusChangedEvtMsg",
     ];
+    this.presentationEvents = [
+      "PresentationConversionCompletedEvtMsg",
+      "NewPresFileAvailableEvtMsg",
+    ];
     this.userEvents = [
       "UserJoinedMeetingEvtMsg",
       "UserLeftMeetingEvtMsg",
@@ -75,6 +79,8 @@ module.exports = class MessageMapping {
   mapMessage(messageObj) {
     if (this.mappedEvent(messageObj,this.meetingEvents)) {
       this.meetingTemplate(messageObj);
+    } else if (this.mappedEvent(messageObj,this.presentationEvents)) {
+      this.presentationTemplate(messageObj);
     } else if (this.mappedEvent(messageObj,this.userEvents)) {
       this.userTemplate(messageObj);
     } else if (this.mappedEvent(messageObj,this.chatEvents)) {
@@ -94,10 +100,13 @@ module.exports = class MessageMapping {
 
   mappedEvent(messageObj,events) {
     return events.some( event => {
-      if ((messageObj.header != null ? messageObj.header.name : undefined) === event) {
+      if (messageObj?.header?.name === event) {
         return true;
       }
-      if ((messageObj.envelope != null ? messageObj.envelope.name : undefined) === event) {
+      if (messageObj?.core?.header?.name === event) {
+        return true;
+      }
+      if (messageObj?.envelope?.name === event) {
         return true;
       }
       return false;
@@ -149,6 +158,39 @@ module.exports = class MessageMapping {
           "presentation-id": messageObj.core.body.presentationId
         }
       };
+    }
+    this.mappedMessage = JSON.stringify(this.mappedObject);
+    Logger.info(`[MessageMapping] Mapped message: ${this.mappedMessage}`);
+  }
+
+  presentationTemplate(messageObj) {
+    const meetingId = messageObj.core.header.meetingId;
+    const userId = messageObj.core.header.userId;
+    const extId = UserMapping.get().getExternalUserID(userId) || "";
+    const data = messageObj.core.body;
+    this.mappedObject.data = {
+      "type": "event",
+      "id": this.mapInternalMessage(messageObj),
+      "attributes": {
+        "meeting": {
+          "internal-meeting-id": meetingId,
+          "external-meeting-id": IDMapping.get().getExternalMeetingID(meetingId)
+        },
+        "user":{
+          "internal-user-id": userId,
+          "external-user-id": extId,
+        }
+      },
+      "event": {
+        "ts": Date.now()
+      }
+    };
+    if (this.mappedObject.data.id === "presentation-uploaded") {
+      this.mappedObject.data.attributes["pres-id"] = data.presentation.id;
+      this.mappedObject.data.attributes["name"] = data.presentation.name;
+    } else if (this.mappedObject.data.id === "presentation-annotated-pdf-ready") {
+      this.mappedObject.data.attributes["pres-id"] = data.presId;
+      this.mappedObject.data.attributes["annotated-file-uri"] = data.annotatedFileURI;
     }
     this.mappedMessage = JSON.stringify(this.mappedObject);
     Logger.info(`[MessageMapping] Mapped message: ${this.mappedMessage}`);
@@ -451,16 +493,11 @@ module.exports = class MessageMapping {
   }
 
   mapInternalMessage(message) {
-    let name;
-    if (message.envelope) {
-      name = message.envelope.name
-    }
-    else if (message.header) {
-      name = message.header.name
-    }
-    const mappedMsg = (() => { switch (name) {
+    const mappedMsg = (name) => { switch (name) {
       case "MeetingCreatedEvtMsg": return "meeting-created";
       case "MeetingDestroyedEvtMsg": return "meeting-ended";
+      case "PresentationConversionCompletedEvtMsg": return "presentation-uploaded";
+      case "NewPresFileAvailableEvtMsg": return "presentation-annotated-pdf-ready";
       case "RecordingStatusChangedEvtMsg": return this.handleRecordingStatusChanged(message);
       case "ScreenshareRtmpBroadcastStartedEvtMsg": return "meeting-screenshare-started";
       case "ScreenshareRtmpBroadcastStoppedEvtMsg": return "meeting-screenshare-stopped";
@@ -506,7 +543,7 @@ module.exports = class MessageMapping {
       case "video_stream_unpublished": return "user-cam-broadcast-end";
       case "user_status_changed_message": return this.handleUserStatusChanged(message);
       case "PadContentEvtMsg": return "pad-content";
-    } })();
-    return mappedMsg;
+    } };
+    return mappedMsg(message?.envelope?.name) || mappedMsg(message?.header?.name) || mappedMsg(message?.core?.header?.name);
   }
 };
