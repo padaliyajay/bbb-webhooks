@@ -16,7 +16,7 @@ module.exports = class MessageMapping {
     ];
     this.presentationEvents = [
       "PresentationConversionCompletedEvtMsg",
-      "NewPresFileAvailableEvtMsg",
+      "NewPresFileAvailableMsg",
     ];
     this.userEvents = [
       "UserJoinedMeetingEvtMsg",
@@ -497,7 +497,7 @@ module.exports = class MessageMapping {
       case "MeetingCreatedEvtMsg": return "meeting-created";
       case "MeetingDestroyedEvtMsg": return "meeting-ended";
       case "PresentationConversionCompletedEvtMsg": return "presentation-uploaded";
-      case "NewPresFileAvailableEvtMsg": return "presentation-annotated-pdf-ready";
+      case "NewPresFileAvailableMsg": return "presentation-annotated-pdf-ready";
       case "RecordingStatusChangedEvtMsg": return this.handleRecordingStatusChanged(message);
       case "ScreenshareRtmpBroadcastStartedEvtMsg": return "meeting-screenshare-started";
       case "ScreenshareRtmpBroadcastStoppedEvtMsg": return "meeting-screenshare-stopped";
