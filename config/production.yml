@@ -11,3 +11,4 @@ hooks:
     - bigbluebutton:from-rap
   permanentURLs:
     - url: 'https://teachernet.com/api/catalog/webhook/bbb/'
+      getRaw: false
